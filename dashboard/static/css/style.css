@@ -1,0 +1,37 @@
+/* Additional custom styles can be added here */
+.card {
+    margin-bottom: 20px;
+}
+
+.log-timestamp {
+    color: #adb5bd;
+}
+
+.log-level-info {
+    color: #007bff;
+}
+
+.log-level-warning {
+    color: #ffc107;
+}
+
+.log-level-error {
+    color: #dc3545;
+}
+
+/* Animation for status indicators */
+.status-badge {
+    transition: all 0.3s ease;
+}
+
+/* Hover effects for cards */
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .kpi-value {
+        font-size: 1.8rem;
+    }
+}

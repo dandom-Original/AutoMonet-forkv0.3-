@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-03-24T20:40:24.034637",
+  "jobs": {
+    "total": 32,
+    "pending": 6,
+    "submitted": 12
+  },
+  "finances": {
+    "earnings": 620,
+    "pending": 1450
+  }
+}

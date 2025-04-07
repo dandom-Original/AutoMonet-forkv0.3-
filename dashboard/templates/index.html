@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoMonet Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            height: 100%;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: bold;
+        }
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .log-container {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #212529;
+            color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .table-container {
+            height: 400px;
+            overflow-y: auto;
+        }
+        .chart-container {
+            height: 300px;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .auto-update-text {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-robot me-2"></i> AutoMonet Dashboard
+            </a>
+            <span class="navbar-text">
+                <span class="badge bg-success" id="status-badge">System Running</span>
+                <span class="ms-2 auto-update-text">Auto-refresh every 10 seconds</span>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- KPI Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card bg-white">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-briefcase me-2"></i> Total Jobs
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="kpi-value" id="total-jobs">0</div>
+                        <div class="kpi-label">Available Jobs</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card bg-white">
+                    <div class="card-header bg-info text-white">
+                        <i class="fas fa-paper-plane me-2"></i> Proposals
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="kpi-value" id="total-proposals">0</div>
+                        <div class="kpi-label">Submitted + Pending</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card bg-white">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-euro-sign me-2"></i> Earnings
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="kpi-value" id="total-earnings">€0</div>
+                        <div class="kpi-label">Total Revenue</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card bg-white">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-hourglass-half me-2"></i> Pending
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="kpi-value" id="pending-earnings">€0</div>
+                        <div class="kpi-label">Awaiting Payment</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-chart-pie me-2"></i> Job Sources
+                    </div>
+                    <div class="card-body">
+                        <div id="job-sources-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-chart-line me-2"></i> Proposal Performance
+                    </div>
+                    <div class="card-body">
+                        <div id="proposal-performance-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log and Proposals Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-terminal me-2"></i> System Logs
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="log-container" id="log-container">
+                            <div id="logs">Waiting for logs...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-list-ul me-2"></i> Recent Proposals
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Job Title</th>
+                                        <th>Platform</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="proposals-table-body">
+                                    <tr>
+                                        <td colspan="4" class="text-center">No proposals yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Health Row -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-info text-white">
+                        <i class="fas fa-heartbeat me-2"></i> System Health
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <div class="mb-2"><i class="fas fa-database fa-2x"></i></div>
+                                <h5>Filesystem</h5>
+                                <span class="badge bg-success" id="filesystem-status">OK</span>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="mb-2"><i class="fas fa-network-wired fa-2x"></i></div>
+                                <h5>Network</h5>
+                                <span class="badge bg-success" id="network-status">OK</span>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="mb-2"><i class="fas fa-memory fa-2x"></i></div>
+                                <h5>Memory</h5>
+                                <span class="badge bg-success" id="memory-status">OK</span>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="mb-2"><i class="fas fa-clock fa-2x"></i></div>
+                                <h5>Last Update</h5>
+                                <span id="last-update-time">Never</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">AutoMonet Dashboard - © 2025</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Custom JavaScript -->
+    <script>
+        // Socket.IO setup
+        const socket = io();
+        
+        // Initialize charts
+        function initializeCharts() {
+            // Job Sources Pie Chart
+            const jobSourcesData = {
+                labels: ['Freelancer.com', 'Remote RSS', 'Reddit', 'Other'],
+                values: [15, 10, 5, 2],
+                type: 'pie',
+                marker: {
+                    colors: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e']
+                }
+            };
+            
+            const jobSourcesLayout = {
+                margin: { t: 0, b: 0, l: 0, r: 0 },
+                showlegend: true,
+                legend: {
+                    orientation: 'h',
+                    y: -0.2
+                },
+                height: 280
+            };
+            
+            Plotly.newPlot('job-sources-chart', [jobSourcesData], jobSourcesLayout, {responsive: true});
+            
+            // Proposal Performance Line Chart
+            const dates = [];
+            const submitted = [];
+            const accepted = [];
+            
+            // Generate some demo data for the past 7 days
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.push(date.toLocaleDateString('de-DE'));
+                submitted.push(Math.floor(Math.random() * 5) + 1);
+                accepted.push(Math.floor(Math.random() * 3));
+            }
+            
+            const trace1 = {
+                x: dates,
+                y: submitted,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Submitted',
+                line: { color: '#4e73df', width: 3 }
+            };
+            
+            const trace2 = {
+                x: dates,
+                y: accepted,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Accepted',
+                line: { color: '#1cc88a', width: 3 }
+            };
+            
+            const proposalLayout = {
+                margin: { t: 10, b: 40, l: 40, r: 10 },
+                xaxis: {
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Count'
+                },
+                legend: {
+                    orientation: 'h',
+                    y: 1.1
+                },
+                height: 280
+            };
+            
+            Plotly.newPlot('proposal-performance-chart', [trace1, trace2], proposalLayout, {responsive: true});
+        }
+        
+        // Update KPIs
+        function updateKPIs(data) {
+            if (data.error) return;
+            
+            document.getElementById('total-jobs').textContent = data.jobs.total || 0;
+            document.getElementById('total-proposals').textContent = 
+                (data.jobs.pending || 0) + (data.jobs.submitted || 0);
+            document.getElementById('total-earnings').textContent = 
+                '€' + (data.finances.earnings || 0);
+            document.getElementById('pending-earnings').textContent = 
+                '€' + (data.finances.pending || 0);
+        }
+        
+        // Update System Health
+        function updateHealth(data) {
+            if (data.error) return;
+            
+            const filesystemStatus = document.getElementById('filesystem-status');
+            const networkStatus = document.getElementById('network-status');
+            const memoryStatus = document.getElementById('memory-status');
+            const lastUpdateTime = document.getElementById('last-update-time');
+            
+            // Update status badges
+            filesystemStatus.textContent = data.components.filesystem || 'Unknown';
+            filesystemStatus.className = `badge ${data.components.filesystem === 'ok' ? 'bg-success' : 'bg-danger'}`;
+            
+            networkStatus.textContent = data.components.network || 'Unknown';
+            networkStatus.className = `badge ${data.components.network === 'ok' ? 'bg-success' : 'bg-danger'}`;
+            
+            memoryStatus.textContent = data.components.memory || 'Unknown';
+            memoryStatus.className = `badge ${data.components.memory === 'ok' ? 'bg-success' : 'bg-danger'}`;
+            
+            // Update last update time
+            if (data.timestamp) {
+                const timestamp = new Date(data.timestamp);
+                lastUpdateTime.textContent = timestamp.toLocaleString('de-DE');
+            }
+            
+            // Update overall status badge
+            const statusBadge = document.getElementById('status-badge');
+            statusBadge.textContent = data.status === 'healthy' ? 'System Running' : 'System Degraded';
+            statusBadge.className = `badge ${data.status === 'healthy' ? 'bg-success' : 'bg-warning'}`;
+        }
+        
+        // Update Logs
+        function updateLogs(logData) {
+            const logsContainer = document.getElementById('logs');
+            logsContainer.innerHTML = '';
+            
+            if (logData.length === 0) {
+                logsContainer.textContent = 'No logs available';
+                return;
+            }
+            
+            logData.forEach(log => {
+                const logLine = document.createElement('div');
+                
+                // Add color based on log level
+                if (log.includes('[ERROR]')) {
+                    logLine.style.color = '#e74a3b';
+                } else if (log.includes('[WARNING]')) {
+                    logLine.style.color = '#f6c23e';
+                } else if (log.includes('[INFO]')) {
+                    logLine.style.color = '#36b9cc';
+                }
+                
+                logLine.textContent = log;
+                logsContainer.appendChild(logLine);
+            });
+            
+            // Auto-scroll to bottom
+            const logContainer = document.getElementById('log-container');
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Update Proposals Table
+        async function updateProposalsTable() {
+            try {
+                const response = await fetch('/api/proposals');
+                const proposals = await response.json();
+                
+                const tableBody = document.getElementById('proposals-table-body');
+                tableBody.innerHTML = '';
+                
+                if (proposals.length === 0 || proposals.error) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="4" class="text-center">No proposals yet</td>';
+                    tableBody.appendChild(row);
+                    return;
+                }
+                
+                // Sort by created date (newest first)
+                proposals.sort((a, b) => {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+                
+                proposals.forEach(proposal => {
+                    const row = document.createElement('tr');
+                    
+                    // Create date object from ISO string
+                    const createdDate = new Date(proposal.created_at);
+                    
+                    // Status badge styling
+                    const statusClass = proposal.status === 'pending' ? 'bg-warning' : 'bg-success';
+                    
+                    row.innerHTML = `
+                        <td>${proposal.job_title}</td>
+                        <td>${proposal.platform}</td>
+                        <td><span class="badge ${statusClass} status-badge">${proposal.status}</span></td>
+                        <td>${createdDate.toLocaleString('de-DE')}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Error updating proposals table:', error);
+            }
+        }
+        
+        // Socket.IO event listeners
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+        
+        socket.on('dashboard_update', (data) => {
+            console.log('Dashboard update received:', data);
+            updateKPIs(data);
+        });
+        
+        socket.on('log_update', (logs) => {
+            console.log('Log update received');
+            updateLogs(logs);
+        });
+        
+        socket.on('health_update', (data) => {
+            console.log('Health update received:', data);
+            updateHealth(data);
+        });
+        
+        // Initial data load
+        async function loadInitialData() {
+            try {
+                // Load dashboard data
+                const dashboardResponse = await fetch('/api/dashboard');
+                const dashboardData = await dashboardResponse.json();
+                updateKPIs(dashboardData);
+                
+                // Load health data
+                const healthResponse = await fetch('/api/health');
+                const healthData = await healthResponse.json();
+                updateHealth(healthData);
+                
+                // Load logs
+                const logsResponse = await fetch('/api/logs');
+                const logsData = await logsResponse.json();
+                updateLogs(logsData);
+                
+                // Load proposals table
+                await updateProposalsTable();
+                
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeCharts();
+            loadInitialData();
+            
+            // Periodically update proposals table (every 30 seconds)
+            setInterval(updateProposalsTable, 30000);
+        });
+    </script>
+</body>
+</html>

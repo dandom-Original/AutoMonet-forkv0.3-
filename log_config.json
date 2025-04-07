@@ -1,0 +1,14 @@
+{
+  "rotation": {
+    "max_size": "10MB",
+    "backup_count": 5,
+    "compress": true
+  },
+  "alert_rules": {
+    "error_patterns": ["ERROR", "CRITICAL", "Exception"],
+    "performance_thresholds": {
+      "cpu": 90,
+      "memory": 85
+    }
+  }
+}
